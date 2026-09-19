@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QSI clear gutter — #106963 harness</title>
+<style>
+  /* Token stand-ins matching EUI Amsterdam / Kibana defaults */
+  :root {
+    --size-xs: 4px;
+    --size-s: 8px;
+    --size-m: 12px;
+    --size-xl: 32px;
+    --size-xxl: 40px;
+    --border-thin: 1px;
+    --radius-small: 4px;
+    --forms-bg: #fff;
+    --forms-border: #98A2B3;
+    --page-bg: #F5F7FA;
+    --text: #1A1C21;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 32px 48px;
+    font: 14px/1.4 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--text); background: var(--page-bg);
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .meta { color: #69707D; font-size: 12px; margin-bottom: 20px; max-width: 720px; }
+  .case { margin: 28px 0; }
+  .case h2 { font-size: 13px; margin: 0 0 8px; font-weight: 600; }
+  .case p { font-size: 12px; color: #69707D; margin: 0 0 10px; max-width: 640px; }
+  .badge {
+    display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .03em;
+    padding: 2px 6px; border-radius: 3px; vertical-align: middle; margin-left: 6px;
+  }
+  .badge.bad { background: #F8E9E9; color: #BD271E; }
+  .badge.ok { background: #E6F9F7; color: #007E77; }
+
+  /* === Shared QSI-like DOM (mirrors EuiTextArea → FormControlLayout + sibling icons) === */
+  .kbnQueryBar__textareaWrap {
+    position: relative;
+    overflow: visible;
+    display: flex;
+    width: 420px;
+    background: transparent;
+  }
+  /* Nested layout wrapper that EuiTextArea renders around the <textarea> */
+  .euiFormControlLayout {
+    position: relative;
+    width: 100%;
+    display: flex;
+  }
+  .kbnQueryBar__textarea {
+    z-index: 1;
+    height: var(--size-xxl);
+    width: 100%;
+    padding: var(--size-xs);
+    padding-top: calc(var(--size-xs) + 2px);
+    padding-left: var(--size-xxl);
+    padding-right: var(--size-xxl);
+    margin: 0;
+    resize: none;
+    font: 14px/1.4 "Roboto Mono", ui-monospace, monospace;
+    color: var(--text);
+    border: var(--border-thin) solid var(--forms-border);
+    border-radius: var(--radius-small);
+    background: var(--forms-bg);
+    overflow-x: hidden;
+    overflow-y: hidden;
+    white-space: nowrap; /* Fleet SearchBar nowrap */
+    word-break: break-all;
+  }
+  .euiFormControlLayoutIcons {
+    position: absolute;
+    z-index: 2;
+    top: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+    max-height: var(--size-xxl);
+  }
+  .euiFormControlLayoutIcons--left { left: var(--size-m); }
+  .euiFormControlLayoutIcons--right { right: var(--size-m); } /* EUI default controlPadding */
+  .searchGlyph { opacity: .55; font-size: 14px; }
+  .euiFormControlLayoutClearButton {
+    pointer-events: all;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #69707D; color: #fff; border: 0;
+    font-size: 11px; line-height: 16px; cursor: pointer; padding: 0;
+  }
+
+  /* --- A: bug (no gutter) --- */
+  /* (defaults only) */
+
+  /* --- B: previous PR fix — opaque gutter flush to edge (covers border) --- */
+  .case-prev .euiFormControlLayoutIcons--right:has(.euiFormControlLayoutClearButton) {
+    background-color: var(--forms-bg);
+    width: var(--size-xxl);
+    justify-content: center;
+    inset-inline-end: 0; /* the regression */
+    right: 0;
+  }
+
+  /* --- C: new fix — opaque gutter inset by border width --- */
+  .case-new .euiFormControlLayoutIcons--right:has(.euiFormControlLayoutClearButton) {
+    background-color: var(--forms-bg);
+    width: var(--size-xxl);
+    justify-content: center;
+    inset-inline-end: var(--border-thin);
+    right: var(--border-thin);
+    top: var(--border-thin);
+    bottom: var(--border-thin);
+    height: auto;
+    max-height: none;
+    border-start-end-radius: calc(var(--radius-small) - var(--border-thin));
+    border-end-end-radius: calc(var(--radius-small) - var(--border-thin));
+  }
+
+  .zoom {
+    margin-top: 10px;
+    width: 420px; height: 72px;
+    border: 1px dashed #D3DAE6; border-radius: 4px;
+    overflow: hidden; background: #fff;
+    position: relative;
+  }
+  .zoom-inner {
+    position: absolute;
+    right: -20px; top: -8px;
+    transform: scale(2.4);
+    transform-origin: top right;
+  }
+  .zoom-label { position: absolute; left: 8px; top: 6px; font-size: 10px; color: #69707D; z-index: 5; }
+</style>
+</head>
+<body>
+  <h1>QueryStringInput clear gutter — elastic/kibana#106963</h1>
+  <p class="meta">
+    Harness mirrors QSI DOM: <code>.kbnQueryBar__textareaWrap</code> →
+    <code>.euiFormControlLayout</code> → <code>textarea.kbnQueryBar__textarea</code>,
+    plus sibling <code>.euiFormControlLayoutIcons</code> (left search / right clear).
+    Fleet-style <code>white-space: nowrap</code>. Not a full Kibana boot — CSS/layout only.
+  </p>
+
+  <div class="case case-bug" id="before">
+    <h2>A. Before (bug) <span class="badge bad">TEXT UNDER ×</span></h2>
+    <p>paddingRight alone — textarea overflow clips at the padding box, so unbroken text paints under the clear control.</p>
+    <div class="kbnQueryBar__textareaWrap">
+      <div class="euiFormControlLayout">
+        <textarea class="kbnQueryBar__textarea kbnQueryBar__textarea--isClearable" readonly>abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-long-hostname.example.internal</textarea>
+      </div>
+      <div class="euiFormControlLayoutIcons euiFormControlLayoutIcons--left"><span class="searchGlyph">🔍</span></div>
+      <div class="euiFormControlLayoutIcons euiFormControlLayoutIcons--right">
+        <button type="button" class="euiFormControlLayoutClearButton" aria-label="Clear">×</button>
+      </div>
+    </div>
+    <div class="zoom"><span class="zoom-label">2.4× crop — right edge</span>
+      <div class="zoom-inner">
+        <div class="kbnQueryBar__textareaWrap">
+          <div class="euiFormControlLayout">
+            <textarea class="kbnQueryBar__textarea kbnQueryBar__textarea--isClearable" readonly>abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-long-hostname.example.internal</textarea>
+          </div>
+          <div class="euiFormControlLayoutIcons euiFormControlLayoutIcons--left"><span class="searchGlyph">🔍</span></div>
+          <div class="euiFormControlLayoutIcons euiFormControlLayoutIcons--right">
+            <button type="button" class="euiFormControlLayoutClearButton">×</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="case case-prev" id="prev-fix">
+    <h2>B. Previous PR gutter (<code>insetInlineEnd: 0</code>) <span class="badge bad">COVERS BORDER</span></h2>
+    <p>Opaque form-background gutter flush to the field edge — text is hidden, but the scrim paints over the input border (biamalveiro review).</p>
+    <div class="kbnQueryBar__textareaWrap">
+      <div class="euiFormControlLayout">
+        <textarea class="kbnQueryBar__textarea kbnQueryBar__textarea--isClearable" readonly>abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-long-hostname.example.internal</textarea>
+      </div>
+      <div class="euiFormControlLayoutIcons euiFormControlLayoutIcons--left"><span class="searchGlyph">🔍</span></div>
+      <div class="euiFormControlLayoutIcons euiFormControlLayoutIcons--right">
+        <button type="button" class="euiFormControlLayoutClearButton" aria-label="Clear">×</button>
+      </div>
+    </div>
+    <div class="zoom"><span class="zoom-label">2.4× crop — right edge / border</span>
+      <div class="zoom-inner">
+        <div class="kbnQueryBar__textareaWrap">
+          <div class="euiFormControlLayout">
+            <textarea class="kbnQueryBar__textarea kbnQueryBar__textarea--isClearable" readonly>abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-long-hostname.example.internal</textarea>
+          </div>
+          <div class="euiFormControlLayoutIcons euiFormControlLayoutIcons--left"><span class="searchGlyph">🔍</span></div>
+          <div class="euiFormControlLayoutIcons euiFormControlLayoutIcons--right">
+            <button type="button" class="euiFormControlLayoutClearButton">×</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="case case-new" id="after">
+    <h2>C. New fix (inset by <code>border.width.thin</code>) <span class="badge ok">TEXT CLEAR + BORDER INTACT</span></h2>
+    <p>Same opaque gutter, but inset on the trailing/block edges by the field border and radius-matched so the input chrome stays visible.</p>
+    <div class="kbnQueryBar__textareaWrap">
+      <div class="euiFormControlLayout">
+        <textarea class="kbnQueryBar__textarea kbnQueryBar__textarea--isClearable" readonly>abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-long-hostname.example.internal</textarea>
+      </div>
+      <div class="euiFormControlLayoutIcons euiFormControlLayoutIcons--left"><span class="searchGlyph">🔍</span></div>
+      <div class="euiFormControlLayoutIcons euiFormControlLayoutIcons--right">
+        <button type="button" class="euiFormControlLayoutClearButton" aria-label="Clear">×</button>
+      </div>
+    </div>
+    <div class="zoom"><span class="zoom-label">2.4× crop — right edge / border</span>
+      <div class="zoom-inner">
+        <div class="kbnQueryBar__textareaWrap">
+          <div class="euiFormControlLayout">
+            <textarea class="kbnQueryBar__textarea kbnQueryBar__textarea--isClearable" readonly>abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-long-hostname.example.internal</textarea>
+          </div>
+          <div class="euiFormControlLayoutIcons euiFormControlLayoutIcons--left"><span class="searchGlyph">🔍</span></div>
+          <div class="euiFormControlLayoutIcons euiFormControlLayoutIcons--right">
+            <button type="button" class="euiFormControlLayoutClearButton">×</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
